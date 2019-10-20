@@ -3,11 +3,14 @@
  */
 package pt.pak3nuh.util.logviewer
 
+import pt.pak3nuh.util.logviewer.util.LogLevel
+import pt.pak3nuh.util.logviewer.util.Logger
 import pt.pak3nuh.util.logviewer.view.MainView
 import tornadofx.*
 
 class LogViewerApp : App(MainView::class)
 
 fun main(args: Array<String>) {
+    Logger.level = LogLevel.DEBUG
     launch<LogViewerApp>(args)
 }
