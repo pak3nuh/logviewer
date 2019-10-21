@@ -31,11 +31,17 @@ class FileChangeNotifier(private val file: Path) : AutoCloseable {
 
     private fun filesModified(paths: Sequence<Path>) {
         logger.trace("File's folder modified")
-        if (paths.any { it == file }) {
+        if (paths.any { it.fileName == file.fileName }) {
             logger.debug("File modified, notifying handlers")
-            val lines = cursor.read(Int.MAX_VALUE)
-            handlers.forEach { it(lines) }
+            readLinesAndNotifyHandlers()
         }
+    }
+
+    private fun readLinesAndNotifyHandlers() {
+        logger.debug("Reading lines")
+        val lines = cursor.read()
+        logger.debug("Notifying handlers")
+        handlers.forEach { it(lines) }
     }
 
     fun onNewLines(handler: LinesHandler) {
@@ -44,6 +50,7 @@ class FileChangeNotifier(private val file: Path) : AutoCloseable {
 
     fun start() {
         logger.debug("Starting notifier thread")
+        readLinesAndNotifyHandlers()
         val thread = Thread(filePollRunnable)
         thread.isDaemon = true
         thread.start()
@@ -72,8 +79,8 @@ private class BlockingPathPollRunnable(private val watchService: WatchService, p
         while (!isClosed) {
             val key: WatchKey? = watchService.poll(1, TimeUnit.SECONDS)
             if (key != null) {
-                key.reset()
                 val paths = key.pollEvents().asSequence().mapNotNull { it.context() as? Path }
+                key.reset()
                 notify(paths)
             }
         }
@@ -88,11 +95,13 @@ private class FileLineCursor(file: Path) : AutoCloseable {
 
     private val reader = BufferedReader(FileReader(file.toFile()))
 
-    fun read(maxLines: Int): Sequence<String> {
+    fun read(maxLines: Int = Int.MAX_VALUE): Sequence<String> {
         return generateSequence { reader.readLine() }
                 .take(maxLines)
                 .takeWhile { it: String? ->
                     it != null
+                }.filter {
+                    it.isNotEmpty()
                 }
     }
 
