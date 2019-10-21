@@ -1,5 +1,6 @@
 package pt.pak3nuh.util.logviewer.view
 
+import javafx.application.Platform.runLater
 import javafx.scene.Parent
 import javafx.stage.FileChooser
 import pt.pak3nuh.util.logviewer.file.FileChangeNotifier
@@ -30,11 +31,28 @@ class MainView : View("Logviewer") {
         // filters
         bottom = borderpane {
             // filter box
-            top = hbox { }
+            top = hbox {
+                val filter = textfield {
+                    promptText = "Filter text"
+                }
+                label("Regex")
+                val regex = checkbox()
+                button {
+                    text = "Apply"
+                    action {
+                        applyFilter(filter.text, regex.isSelected)
+                    }
+                }
+
+            }
 
             // multiple list view
             center = pane { }
         }
+    }
+
+    private fun applyFilter(filter: String, regex: Boolean) {
+        logger.debug("Applying filter %s regex %b", filter, regex)
     }
 
     private fun selectFile() {
@@ -51,7 +69,11 @@ class MainView : View("Logviewer") {
         this.notifier?.close()
         lineList.clear()
         val notifier = FileChangeNotifier(file.toPath())
-        notifier.onNewLines { lineList.addAll(it) }
+        notifier.onNewLines {
+            runLater {
+                lineList.addAll(it)
+            }
+        }
         notifier.start()
         this.notifier = notifier
     }
