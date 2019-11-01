@@ -1,7 +1,9 @@
 package pt.pak3nuh.util.logviewer.view
 
 import javafx.application.Platform.runLater
+import javafx.collections.transformation.FilteredList
 import javafx.scene.Parent
+import javafx.scene.layout.VBox
 import javafx.stage.FileChooser
 import pt.pak3nuh.util.logviewer.file.FileChangeNotifier
 import pt.pak3nuh.util.logviewer.util.Logger
@@ -14,6 +16,7 @@ class MainView : View("Logviewer") {
 
     private val lineList = observableListOf<String>()
     private var notifier: FileChangeNotifier? = null
+    private lateinit var filterBox: VBox
 
     override val root: Parent = borderpane {
         // Open, Clear, Settings
@@ -40,19 +43,35 @@ class MainView : View("Logviewer") {
                 button {
                     text = "Apply"
                     action {
-                        applyFilter(filter.text, regex.isSelected)
+                        addFilterPane(filter.text, regex.isSelected)
                     }
                 }
 
             }
 
             // multiple list view
-            center = pane { }
+            center = pane {
+                filterBox = vbox()
+            }
         }
     }
 
-    private fun applyFilter(filter: String, regex: Boolean) {
+    private fun addFilterPane(filter: String, regex: Boolean) {
         logger.debug("Applying filter %s regex %b", filter, regex)
+        filterBox.apply {
+            val box = vbox()
+            box.apply {
+                hbox {
+                    label("Filtering by $filter")
+                    button("X") {
+                        action { filterBox.children.remove(box) }
+                    }
+                }
+                val predicate: (CharSequence) -> Boolean =
+                        if (regex) { it -> Regex(filter).matches(it) } else { it -> filter in it }
+                add(listview(FilteredList(lineList, predicate)))
+            }
+        }
     }
 
     private fun selectFile() {
