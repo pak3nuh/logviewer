@@ -2,8 +2,9 @@ package pt.pak3nuh.util.logviewer.view
 
 import javafx.application.Platform.runLater
 import javafx.collections.transformation.FilteredList
+import javafx.geometry.Orientation
 import javafx.scene.Parent
-import javafx.scene.layout.VBox
+import javafx.scene.control.SplitPane
 import javafx.stage.FileChooser
 import pt.pak3nuh.util.logviewer.file.FileChangeNotifier
 import pt.pak3nuh.util.logviewer.util.Logger
@@ -16,60 +17,77 @@ class MainView : View("Logviewer") {
 
     private val lineList = observableListOf<String>()
     private var notifier: FileChangeNotifier? = null
-    private lateinit var filterBox: VBox
+    private lateinit var filterPane: SplitPane
 
     override val root: Parent = borderpane {
+
         // Open, Clear, Settings
         top = hbox {
-            button("Open") { action(::selectFile) }
-            button("Clear") { lineList.clear() }
+            button("Open File").action(::selectFile)
+            button("Clear").action(lineList::clear)
             button("Settings")
         }
 
         // lines
-        center = pane {
-            listview(lineList)
-        }
-
-        // filters
-        bottom = borderpane {
-            // filter box
-            top = hbox {
-                val filter = textfield {
-                    promptText = "Filter text"
+        center = anchorpane {
+            splitpane(Orientation.VERTICAL) {
+                anchorpane {
+                    listview(lineList).anchorAll()
                 }
-                label("Regex")
-                val regex = checkbox()
-                button {
-                    text = "Apply"
-                    action {
-                        addFilterPane(filter.text, regex.isSelected)
+
+                vbox {
+                    // filter application field
+                    hbox {
+                        val filter = textfield {
+                            prefWidth = 200.0
+                            promptText = "Filter text"
+                        }
+                        button {
+                            text = "Contains Filter"
+                            action {
+                                addFilterView(filter.text, false)
+                            }
+                        }
+                        button {
+                            text = "Regex Filter"
+                            action {
+                                addFilterView(filter.text, true)
+                            }
+                        }
+                    }
+
+                    // multiple list view
+                    anchorpane {
+                        filterPane = splitpane(Orientation.VERTICAL).anchorAll()
                     }
                 }
-
-            }
-
-            // multiple list view
-            center = pane {
-                filterBox = vbox()
+                anchorAll()
             }
         }
     }
 
-    private fun addFilterPane(filter: String, regex: Boolean) {
+    init {
+        this.currentWindow?.apply {
+            width = 500.0
+            height = 500.0
+        }
+    }
+
+    private fun addFilterView(filter: String, regex: Boolean) {
         logger.debug("Applying filter %s regex %b", filter, regex)
-        filterBox.apply {
-            val box = vbox()
-            box.apply {
-                hbox {
-                    label("Filtering by $filter")
-                    button("X") {
-                        action { filterBox.children.remove(box) }
-                    }
+        filterPane.apply {
+            val container = borderpane()
+            container.apply {
+                top = hbox {
+                    val filterLabel = if (regex) "Regex" else "Contains"
+                    label("""$filterLabel filtering by "$filter"""")
+                }
+                right = button("X") {
+                    action { filterPane.items.remove(container) }
                 }
                 val predicate: (CharSequence) -> Boolean =
                         if (regex) { it -> Regex(filter).matches(it) } else { it -> filter in it }
-                add(listview(FilteredList(lineList, predicate)))
+                center = listview(FilteredList(lineList, predicate))
             }
         }
     }
