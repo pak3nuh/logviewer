@@ -15,7 +15,7 @@ import pt.pak3nuh.util.logviewer.view.anchorAll
 import tornadofx.*
 import java.io.File
 
-class LogFileTab(file: File) : Tab(file.nameWithoutExtension) {
+class LogFileTab(file: File) : Tab(file.name) {
 
     private val logger = Logger.createLogger<LogFileTab>(file.name)
 
