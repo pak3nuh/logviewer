@@ -13,9 +13,9 @@ import java.util.concurrent.TimeUnit
 
 internal typealias LinesHandler = (Sequence<String>) -> Unit
 
-private val logger = Logger.createLogger<FileChangeNotifier>()
-
 class FileChangeNotifier(private val file: Path) : AutoCloseable {
+
+    private val logger = Logger.createLogger<FileChangeNotifier>(file.fileName.toString())
 
     private val handlers = ArrayList<LinesHandler>()
     private val filePollRunnable: BlockingPathPollRunnable
