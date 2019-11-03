@@ -21,14 +21,13 @@ dependencies {
 }
 
 javafx {
-    modules("javafx.controls", "javafx.fxml")
+    modules("javafx.controls")
 }
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "11"
 }
 
-
 application {
-    mainClassName = "pt.pak3nuh.util.logviewer.AppKt"
+    mainClassName = "pt.pak3nuh.util.logviewer.LogViewerApp"
 }
