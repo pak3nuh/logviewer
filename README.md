@@ -8,6 +8,7 @@ GOTO line on filter pane click
 #### Roadmap
 - Structured log: Split and extract each log line into columns for easy access
 - Sort lines
+- Tab view for multiple opened files
 
 ### Requirements
 - Java 11
