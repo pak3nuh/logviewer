@@ -1,73 +1,34 @@
 package pt.pak3nuh.util.logviewer.view
 
-import javafx.application.Platform.runLater
-import javafx.collections.transformation.FilteredList
-import javafx.event.EventHandler
-import javafx.geometry.Orientation
 import javafx.scene.Parent
-import javafx.scene.control.ListView
-import javafx.scene.control.SelectionMode
-import javafx.scene.control.SplitPane
+import javafx.scene.control.TabPane
 import javafx.stage.FileChooser
-import pt.pak3nuh.util.logviewer.data.LogItem
-import pt.pak3nuh.util.logviewer.file.FileChangeNotifier
 import pt.pak3nuh.util.logviewer.util.Logger
+import pt.pak3nuh.util.logviewer.view.control.LogFileTab
 import tornadofx.*
 import java.io.File
+import java.nio.file.Paths
 
 private val logger = Logger.createLogger<MainView>()
 
 class MainView : View("Logviewer") {
 
-    private val lineList = observableListOf<LogItem>()
-    private var notifier: FileChangeNotifier? = null
-    private lateinit var filterPane: SplitPane
-    private lateinit var mainView: ListView<LogItem>
+    private lateinit var tabPane: TabPane
 
     override val root: Parent = borderpane {
 
         // Open, Clear, Settings
         top = hbox {
             button("Open File").action(::selectFile)
-            button("Clear").action(lineList::clear)
+            button("Clear").action {
+                (tabPane.selectionModel.selectedItem as? LogFileTab)?.clearLines()
+            }
             button("Settings")
         }
 
-        // lines
+        // tabs
         center = anchorpane {
-            splitpane(Orientation.VERTICAL) {
-                anchorpane {
-                    mainView = listview(lineList).anchorAll()
-                }
-
-                vbox {
-                    // filter application field
-                    hbox {
-                        val filter = textfield {
-                            prefWidth = 200.0
-                            promptText = "Filter text"
-                        }
-                        button {
-                            text = "Contains Filter"
-                            action {
-                                addFilterView(filter.text, false)
-                            }
-                        }
-                        button {
-                            text = "Regex Filter"
-                            action {
-                                addFilterView(filter.text, true)
-                            }
-                        }
-                    }
-
-                    // multiple list view
-                    anchorpane {
-                        filterPane = splitpane(Orientation.VERTICAL).anchorAll()
-                    }
-                }
-                anchorAll()
-            }
+            tabPane = tabpane().anchorAll()
         }
     }
 
@@ -108,22 +69,12 @@ class MainView : View("Logviewer") {
         val chooser = FileChooser()
         val file: File? = chooser.showOpenDialog(this.currentWindow)
         if (file != null) {
-            logger.info("Opening file %s", file)
-            openFile(file)
+            addFileTab(file)
         }
     }
 
-    private fun openFile(file: File) {
-        require(file.exists()) { "File must exist" }
-        this.notifier?.close()
-        lineList.clear()
-        val notifier = FileChangeNotifier(file.toPath())
-        notifier.onNewLines {
-            runLater {
-                lineList.addAll(it.map(::LogItem))
-            }
-        }
-        notifier.start()
-        this.notifier = notifier
+    private fun addFileTab(file: File) {
+        logger.info("Opening file %s", file)
+        tabPane.tabs.add(LogFileTab(file))
     }
 }
