@@ -53,6 +53,7 @@ class FileChangeNotifier(private val file: Path) : AutoCloseable {
         readLinesAndNotifyHandlers()
         val thread = Thread(filePollRunnable)
         thread.isDaemon = true
+        // thread will die when the runnable is closed
         thread.start()
     }
 

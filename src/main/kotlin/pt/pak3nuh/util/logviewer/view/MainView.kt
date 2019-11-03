@@ -2,10 +2,14 @@ package pt.pak3nuh.util.logviewer.view
 
 import javafx.application.Platform.runLater
 import javafx.collections.transformation.FilteredList
+import javafx.event.EventHandler
 import javafx.geometry.Orientation
 import javafx.scene.Parent
+import javafx.scene.control.ListView
+import javafx.scene.control.SelectionMode
 import javafx.scene.control.SplitPane
 import javafx.stage.FileChooser
+import pt.pak3nuh.util.logviewer.data.LogItem
 import pt.pak3nuh.util.logviewer.file.FileChangeNotifier
 import pt.pak3nuh.util.logviewer.util.Logger
 import tornadofx.*
@@ -15,9 +19,10 @@ private val logger = Logger.createLogger<MainView>()
 
 class MainView : View("Logviewer") {
 
-    private val lineList = observableListOf<String>()
+    private val lineList = observableListOf<LogItem>()
     private var notifier: FileChangeNotifier? = null
     private lateinit var filterPane: SplitPane
+    private lateinit var mainView: ListView<LogItem>
 
     override val root: Parent = borderpane {
 
@@ -32,7 +37,7 @@ class MainView : View("Logviewer") {
         center = anchorpane {
             splitpane(Orientation.VERTICAL) {
                 anchorpane {
-                    listview(lineList).anchorAll()
+                    mainView = listview(lineList).anchorAll()
                 }
 
                 vbox {
@@ -85,9 +90,16 @@ class MainView : View("Logviewer") {
                 right = button("X") {
                     action { filterPane.items.remove(container) }
                 }
-                val predicate: (CharSequence) -> Boolean =
-                        if (regex) { it -> Regex(filter).matches(it) } else { it -> filter in it }
-                center = listview(FilteredList(lineList, predicate))
+                val predicate: (LogItem) -> Boolean =
+                        if (regex) { it -> Regex(filter).matches(it.message) } else { it -> filter in it.message }
+                center = listview(FilteredList(lineList, predicate)) {
+                    selectionModel.selectionMode = SelectionMode.SINGLE
+                    onMouseClicked = EventHandler {
+                        val selectedItem = this.selectionModel.selectedItem
+                        mainView.selectionModel.select(selectedItem)
+                        mainView.scrollTo(selectedItem)
+                    }
+                }
             }
         }
     }
@@ -108,7 +120,7 @@ class MainView : View("Logviewer") {
         val notifier = FileChangeNotifier(file.toPath())
         notifier.onNewLines {
             runLater {
-                lineList.addAll(it)
+                lineList.addAll(it.map(::LogItem))
             }
         }
         notifier.start()

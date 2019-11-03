@@ -1,7 +1,17 @@
 # Logviewer
+Yet another log viewer. You know what it does.
+
+### Features
+Multiple filter panes with both simple contains and regex filtering
+GOTO line on filter pane click
+
+#### Roadmap
+- Structured log: Split and extract each log line into columns for easy access
+- Sort lines
 
 ### Requirements
 - Java 11
+- Gradle 5.6 (optional if gradle wrapper is used)
 
 ### Run the application
 
