@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = "pt.pak3nuh.util"
+version = "0.1"
 
 plugins {
     id("org.jetbrains.kotlin.jvm") version "1.3.41"
