@@ -9,6 +9,7 @@ Yet another log viewer. You know what it does.
 #### Roadmap
 - Structured log: Split and extract each log line into columns for easy access
 - Sort lines
+- Reuse same thread to poll several files
 
 ### Requirements
 - Java 11

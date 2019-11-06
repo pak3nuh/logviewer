@@ -7,7 +7,6 @@ import pt.pak3nuh.util.logviewer.util.Logger
 import pt.pak3nuh.util.logviewer.view.control.LogFileTab
 import tornadofx.*
 import java.io.File
-import java.nio.file.Paths
 
 private val logger = Logger.createLogger<MainView>()
 
@@ -36,32 +35,6 @@ class MainView : View("Logviewer") {
         this.currentWindow?.apply {
             width = 500.0
             height = 500.0
-        }
-    }
-
-    private fun addFilterView(filter: String, regex: Boolean) {
-        logger.debug("Applying filter %s regex %b", filter, regex)
-        filterPane.apply {
-            val container = borderpane()
-            container.apply {
-                top = hbox {
-                    val filterLabel = if (regex) "Regex" else "Contains"
-                    label("""$filterLabel filtering by "$filter"""")
-                }
-                right = button("X") {
-                    action { filterPane.items.remove(container) }
-                }
-                val predicate: (LogItem) -> Boolean =
-                        if (regex) { it -> Regex(filter).matches(it.message) } else { it -> filter in it.message }
-                center = listview(FilteredList(lineList, predicate)) {
-                    selectionModel.selectionMode = SelectionMode.SINGLE
-                    onMouseClicked = EventHandler {
-                        val selectedItem = this.selectionModel.selectedItem
-                        mainView.selectionModel.select(selectedItem)
-                        mainView.scrollTo(selectedItem)
-                    }
-                }
-            }
         }
     }
 
