@@ -1,15 +1,12 @@
 package pt.pak3nuh.util.logviewer.file
 
 import pt.pak3nuh.util.logviewer.util.Logger
-import java.io.BufferedReader
-import java.io.FileReader
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds
-import java.nio.file.WatchKey
 import java.nio.file.WatchService
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 internal typealias LinesHandler = (Sequence<String>) -> Unit
 
@@ -18,15 +15,16 @@ class FileChangeNotifier(private val file: Path) : AutoCloseable {
     private val logger = Logger.createLogger<FileChangeNotifier>(file.fileName.toString())
 
     private val handlers = ArrayList<LinesHandler>()
-    private val filePollRunnable: BlockingPathPollRunnable
+    private val closeHandle: AutoCloseable
     private val cursor = FileLineCursor(file)
+    private val state = AtomicReference<NotifierState>(NotifierState.STARTED)
 
     init {
         require(Files.exists(file)) { "File must exist" }
         val folder: Path = file.parent
         val watchService: WatchService = FileSystems.getDefault().newWatchService()
         folder.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
-        filePollRunnable = BlockingPathPollRunnable(watchService, ::filesModified)
+        closeHandle = NotifierExecutors.enqueue(PathPollImpl(watchService, ::filesModified, state::get))
     }
 
     private fun filesModified(paths: Sequence<Path>) {
@@ -49,64 +47,23 @@ class FileChangeNotifier(private val file: Path) : AutoCloseable {
     }
 
     fun start() {
-        logger.debug("Starting notifier thread")
+        logger.debug("Starting file reader")
         readLinesAndNotifyHandlers()
-        val thread = Thread(filePollRunnable)
-        thread.isDaemon = true
-        // thread will die when the runnable is closed
-        thread.start()
+        state.set(NotifierState.STARTED)
+    }
+
+    fun pause() {
+        logger.debug("Pausing file reader")
+        state.set(NotifierState.PAUSED)
     }
 
     override fun close() {
         logger.debug("Closing notifier")
-        filePollRunnable.close()
+        closeHandle.close()
         cursor.close()
     }
 }
 
-private class BlockingPathPollRunnable(private val watchService: WatchService, private val notify: (Sequence<Path>) -> Unit) :
-        Runnable, AutoCloseable {
-
-    @Volatile
-    private var isClosed = false
-
-    override fun run() {
-        watchService.use {
-            doPoll()
-        }
-    }
-
-    private fun doPoll() {
-        while (!isClosed) {
-            val key: WatchKey? = watchService.poll(1, TimeUnit.SECONDS)
-            if (key != null) {
-                val paths = key.pollEvents().asSequence().mapNotNull { it.context() as? Path }
-                key.reset()
-                notify(paths)
-            }
-        }
-    }
-
-    override fun close() {
-        isClosed = true
-    }
-}
-
-private class FileLineCursor(file: Path) : AutoCloseable {
-
-    private val reader = BufferedReader(FileReader(file.toFile()))
-
-    fun read(maxLines: Int = Int.MAX_VALUE): Sequence<String> {
-        return generateSequence { reader.readLine() }
-                .take(maxLines)
-                .takeWhile { it: String? ->
-                    it != null
-                }.filter {
-                    it.isNotEmpty()
-                }
-    }
-
-    override fun close() {
-        reader.close()
-    }
+enum class NotifierState {
+    STARTED, PAUSED
 }
