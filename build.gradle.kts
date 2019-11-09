@@ -30,5 +30,5 @@ tasks.withType<KotlinCompile> {
 }
 
 application {
-    mainClassName = "pt.pak3nuh.util.logviewer.LogViewerApp"
+    mainClassName = "pt.pak3nuh.util.logviewer.LogViewerAppKt"
 }
