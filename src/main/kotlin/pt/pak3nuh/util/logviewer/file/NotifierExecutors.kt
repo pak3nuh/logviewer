@@ -1,84 +1,95 @@
 package pt.pak3nuh.util.logviewer.file
 
-import java.util.concurrent.Executors
-import java.util.concurrent.ThreadFactory
+import java.util.*
+import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+
+const val THREAD_NUMBER_PROPERTY = "logviewer.threading.number"
 
 object NotifierExecutors {
 
     /**
-     * Maximum number of files handled by each thread.
-     * Once the number of files passes the threshold a new thread is created and the files are split evenly between
-     * all available threads.
+     * Number of threads available to process the polling of the files
      */
-    var filesPerThread: Int = 10
+    var numberOfThreads: Int = 1
         set(value) {
             field = value
-            rebalanceIfNeeded()
+            rebalance(numberOfThreads - threadQueue.size)
         }
 
-    private val pollList = mutableListOf<PathPoll>()
-    private var numThreads = 1
-    private var executor = Executors.newFixedThreadPool(numThreads, PollThreadFactory(pollList))
+    private val pollQueue: Queue<PollData> = ConcurrentLinkedDeque()
+    private val threadQueue: MutableList<PollThread> = arrayListOf(createPollThread())
+
+    private fun createPollThread(): PollThread {
+        val pollThread = PollThread(pollQueue)
+        pollThread.start()
+        return pollThread
+    }
+
+    @Synchronized
+    private fun rebalance(threadsToAdd: Int) {
+        if (threadsToAdd > 0) {
+            repeat(threadsToAdd) {
+                threadQueue.add(createPollThread())
+            }
+        } else {
+            var counter = 0
+            threadQueue.removeIf {
+                if (counter-- > threadsToAdd) {
+                    it.closed = true
+                    true
+                } else
+                    false
+            }
+        }
+    }
 
     fun enqueue(runnable: PathPoll): AutoCloseable {
-        pollList.add(runnable)
-        rebalanceIfNeeded()
+        val data = PollData(runnable)
+        pollQueue.offer(data)
         return AutoCloseable {
-            pollList.remove(runnable)
-            runnable.close()
-        }
-    }
-
-    fun shutdown() {
-        executor.shutdown()
-    }
-
-    private fun rebalanceIfNeeded() {
-        if (pollList.isEmpty())
-            return
-
-        val ratio = filesPerThread / pollList.size + 1
-        if (ratio != numThreads) {
-            numThreads = ratio
-            executor.shutdown()
-            executor = Executors.newFixedThreadPool(ratio, PollThreadFactory(pollList))
+            data.expired = true
         }
     }
 
 }
 
+private data class PollData(val pollPathPoll: PathPoll, var expired: Boolean = false)
+
 private const val REFRESH_TIME_MS = 1_000L
 
-private class PollThreadFactory(private val list: List<PathPoll>) : ThreadFactory {
+private class PollThread(private val queue: Queue<PollData>) : Thread("file-poll-${threadCounter.getAndIncrement()}") {
 
-    private val counter = AtomicInteger()
+    init {
+        isDaemon = true
+    }
 
-    override fun newThread(r: Runnable) = PollThread(counter.getAndIncrement())
+    @Volatile
+    var closed: Boolean = false
 
-    private inner class PollThread(private val threadNumber: Int) : Thread("file-poll-$threadNumber") {
-        override fun run() {
-            val pollCopy = splitList()
-            if (pollCopy.isEmpty()) {
-                sleep(REFRESH_TIME_MS)
-            } else {
-                val timeout = REFRESH_TIME_MS / pollCopy.size
-                pollCopy.forEach {
-                    it.poll(timeout, TimeUnit.MILLISECONDS)
-                }
+    override fun run() {
+        while (!closed) {
+            doPoll()
+        }
+    }
+
+    private fun doPoll() {
+        val data: PollData? = queue.poll()
+        when {
+            data == null -> sleep(REFRESH_TIME_MS)
+            data.expired -> data.pollPathPoll.close()
+            else -> {
+                val size = queue.size + 1
+                val timeout = REFRESH_TIME_MS / size
+                data.pollPathPoll.poll(timeout, TimeUnit.MILLISECONDS)
+                queue.offer(data)
             }
-
         }
+    }
 
-        private fun splitList(): List<PathPoll> {
-            // todo list may change size between sequence evaluation and process items twice or never
-            // may not be a problem because it should processed on the next refresh
-            // todo uneven numbers will miss the remainder
-            val slice = list.size / threadNumber
-            val offset = slice * threadNumber
-            return list.asSequence().drop(offset).take(slice).toList()
-        }
+    private companion object {
+        val threadCounter = AtomicInteger(0)
     }
 }
 

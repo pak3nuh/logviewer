@@ -4,12 +4,18 @@ Yet another log viewer. You know what it does.
 ### Features
 - Multiple filter panes with both simple contains and regex filtering
 - GOTO line on filter pane click
-- Tab view for multiple opened files 
+- Tab view for multiple opened files
+- Configurable number of thread to poll the file changes
+
+The number is configurable by setting the JVM property `logviewer.threading.number`. If gradle is used add the `-D` to
+add the property like `gradle run -Dlogviewer.threading.number=5`
 
 #### Roadmap
 - Structured log: Split and extract each log line into columns for easy access
 - Sort lines
-- Reuse same thread to poll several files
+
+#### Nice to have
+- Change thread model to coroutines with kotlin flows for notification
 
 ### Requirements
 - Java 11
