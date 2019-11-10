@@ -4,10 +4,8 @@ import javafx.application.Platform
 import javafx.collections.transformation.FilteredList
 import javafx.event.EventHandler
 import javafx.geometry.Orientation
-import javafx.scene.control.ListView
-import javafx.scene.control.SelectionMode
-import javafx.scene.control.SplitPane
-import javafx.scene.control.Tab
+import javafx.scene.control.*
+import javafx.util.Callback
 import pt.pak3nuh.util.logviewer.data.LogItem
 import pt.pak3nuh.util.logviewer.file.FileChangeNotifier
 import pt.pak3nuh.util.logviewer.util.Logger
@@ -21,8 +19,9 @@ class LogFileTab(file: File) : Tab(file.name) {
 
     private val lineList = observableListOf<LogItem>()
     private var notifier: FileChangeNotifier? = null
+    private val settings = Settings()
     private lateinit var filterPane: SplitPane
-    private lateinit var mainView: ListView<LogItem>
+    private lateinit var mainView: TableView<LogItem>
 
     init {
         openFile(file)
@@ -33,7 +32,10 @@ class LogFileTab(file: File) : Tab(file.name) {
             center = anchorpane {
                 splitpane(Orientation.VERTICAL) {
                     anchorpane {
-                        mainView = listview(lineList).anchorAll()
+                        mainView = tableview(lineList) {
+                            isEditable = false
+                            configureColumns(this)
+                        }.anchorAll()
                     }
 
                     vbox {
@@ -66,6 +68,18 @@ class LogFileTab(file: File) : Tab(file.name) {
                 }
             }
         }
+    }
+
+    private fun configureColumns(tableView: TableView<LogItem>) {
+        val columns = tableView.columns
+        columns.clear()
+        columns.addAll(settings.columns.map { colDef ->
+            val column = TableColumn<LogItem, String>(colDef.name)
+            column.cellValueFactory = Callback {
+                stringProperty(colDef.getter(it.value))
+            }
+            column
+        })
     }
 
     private fun addFilterView(filter: String, regex: Boolean) {
