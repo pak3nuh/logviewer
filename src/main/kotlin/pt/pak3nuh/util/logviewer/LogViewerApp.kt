@@ -3,14 +3,27 @@
  */
 package pt.pak3nuh.util.logviewer
 
+import pt.pak3nuh.util.logviewer.file.NotifierExecutors
+import pt.pak3nuh.util.logviewer.file.THREAD_NUMBER_PROPERTY
 import pt.pak3nuh.util.logviewer.util.LogLevel
 import pt.pak3nuh.util.logviewer.util.Logger
 import pt.pak3nuh.util.logviewer.view.MainView
 import tornadofx.*
 
+private val logger = Logger.createLogger<LogViewerApp>()
+
 class LogViewerApp : App(MainView::class)
 
 fun main(args: Array<String>) {
     Logger.level = LogLevel.DEBUG
+    configureThreads(System.getProperty(THREAD_NUMBER_PROPERTY))
     launch<LogViewerApp>(args)
+}
+
+fun configureThreads(threadProperty: String?) {
+    logger.debug("Threading property value: %s", threadProperty)
+    val propValue = threadProperty?.toIntOrNull()
+    if (propValue != null) {
+        NotifierExecutors.numberOfThreads = propValue
+    }
 }

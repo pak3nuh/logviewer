@@ -30,5 +30,12 @@ tasks.withType<KotlinCompile> {
 }
 
 application {
-    mainClassName = "pt.pak3nuh.util.logviewer.LogViewerApp"
+    mainClassName = "pt.pak3nuh.util.logviewer.LogViewerAppKt"
+}
+
+val run by tasks.getting(JavaExec::class) {
+    systemProperties = System.getProperties()
+            .filter { it.key.toString().startsWith("logviewer") }
+            .map { Pair(it.key.toString(), it.value) }
+            .toMap()
 }
