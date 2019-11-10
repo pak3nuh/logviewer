@@ -11,14 +11,10 @@ interface PathPoll : AutoCloseable {
 
 class PathPollImpl(
         private val watchService: WatchService,
-        private val notify: (Sequence<Path>) -> Unit,
-        private val state: () -> NotifierState
+        private val notify: (Sequence<Path>) -> Unit
 ) : PathPoll {
 
     override fun poll(timeout: Long, unit: TimeUnit) {
-        if (state() == NotifierState.PAUSED)
-            return
-
         val key: WatchKey? = watchService.poll(timeout, unit)
         if (key != null) {
             val paths = key.pollEvents().asSequence().mapNotNull { it.context() as? Path }

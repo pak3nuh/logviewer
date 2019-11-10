@@ -1,12 +1,7 @@
 package pt.pak3nuh.util.logviewer.file
 
 import pt.pak3nuh.util.logviewer.util.Logger
-import java.nio.file.FileSystems
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.StandardWatchEventKinds
-import java.nio.file.WatchService
-import java.util.concurrent.atomic.AtomicReference
+import java.nio.file.*
 
 internal typealias LinesHandler = (Sequence<String>) -> Unit
 
@@ -17,17 +12,20 @@ class FileChangeNotifier(private val file: Path) : AutoCloseable {
     private val handlers = ArrayList<LinesHandler>()
     private val closeHandle: AutoCloseable
     private val cursor = FileLineCursor(file)
-    private val state = AtomicReference<NotifierState>(NotifierState.STARTED)
+    private var state = NotifierState.STARTED
 
     init {
         require(Files.exists(file)) { "File must exist" }
         val folder: Path = file.parent
         val watchService: WatchService = FileSystems.getDefault().newWatchService()
         folder.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
-        closeHandle = NotifierExecutors.enqueue(PathPollImpl(watchService, ::filesModified, state::get))
+        closeHandle = NotifierExecutors.enqueue(PathPollImpl(watchService, ::filesModified))
     }
 
     private fun filesModified(paths: Sequence<Path>) {
+        if (state === NotifierState.PAUSED)
+            return
+
         logger.trace("File's folder modified")
         if (paths.any { it.fileName == file.fileName }) {
             logger.debug("File modified, notifying handlers")
@@ -49,12 +47,12 @@ class FileChangeNotifier(private val file: Path) : AutoCloseable {
     fun start() {
         logger.debug("Starting file reader")
         readLinesAndNotifyHandlers()
-        state.set(NotifierState.STARTED)
+        state = NotifierState.STARTED
     }
 
     fun pause() {
         logger.debug("Pausing file reader")
-        state.set(NotifierState.PAUSED)
+        state = NotifierState.PAUSED
     }
 
     override fun close() {
