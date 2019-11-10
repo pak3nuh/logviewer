@@ -23,8 +23,10 @@ class FileChangeNotifier(private val file: Path) : AutoCloseable {
     }
 
     private fun filesModified(paths: Sequence<Path>) {
-        if (state === NotifierState.PAUSED)
+        if (state === NotifierState.PAUSED) {
+            logger.trace("Notifier paused, ignoring modification")
             return
+        }
 
         logger.trace("File's folder modified")
         if (paths.any { it.fileName == file.fileName }) {
