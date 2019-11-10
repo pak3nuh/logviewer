@@ -1,5 +1,6 @@
 package pt.pak3nuh.util.logviewer.file
 
+import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.TimeUnit
@@ -45,8 +46,8 @@ object NotifierExecutors {
         }
     }
 
-    fun enqueue(runnable: PathPoll): AutoCloseable {
-        val data = PollData(runnable)
+    fun enqueue(pollStrategy: PathPoll, consumer: (Sequence<Path>) -> Unit): AutoCloseable {
+        val data = PollData(pollStrategy, consumer)
         pollQueue.offer(data)
         return AutoCloseable {
             data.expired = true
@@ -55,7 +56,7 @@ object NotifierExecutors {
 
 }
 
-private data class PollData(val pollPathPoll: PathPoll, var expired: Boolean = false)
+private data class PollData(val pollPathPoll: PathPoll, val consumer: (Sequence<Path>) -> Unit, var expired: Boolean = false)
 
 private const val REFRESH_TIME_MS = 1_000L
 
@@ -82,7 +83,8 @@ private class PollThread(private val queue: Queue<PollData>) : Thread("file-poll
             else -> {
                 val size = queue.size + 1
                 val timeout = REFRESH_TIME_MS / size
-                data.pollPathPoll.poll(timeout, TimeUnit.MILLISECONDS)
+                val poll = data.pollPathPoll.poll(timeout, TimeUnit.MILLISECONDS)
+                data.consumer(poll)
                 queue.offer(data)
             }
         }

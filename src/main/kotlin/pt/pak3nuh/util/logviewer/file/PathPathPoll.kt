@@ -6,20 +6,21 @@ import java.nio.file.WatchService
 import java.util.concurrent.TimeUnit
 
 interface PathPoll : AutoCloseable {
-    fun poll(timeout: Long, unit: TimeUnit)
+    fun poll(timeout: Long, unit: TimeUnit): Sequence<Path>
 }
 
 class PathPollImpl(
-        private val watchService: WatchService,
-        private val notify: (Sequence<Path>) -> Unit
+        private val watchService: WatchService
 ) : PathPoll {
 
-    override fun poll(timeout: Long, unit: TimeUnit) {
+    override fun poll(timeout: Long, unit: TimeUnit): Sequence<Path> {
         val key: WatchKey? = watchService.poll(timeout, unit)
-        if (key != null) {
+        return if (key != null) {
             val paths = key.pollEvents().asSequence().mapNotNull { it.context() as? Path }
             key.reset()
-            notify(paths)
+            paths
+        } else {
+            emptySequence()
         }
     }
 

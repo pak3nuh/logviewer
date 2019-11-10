@@ -19,7 +19,7 @@ class FileChangeNotifier(private val file: Path) : AutoCloseable {
         val folder: Path = file.parent
         val watchService: WatchService = FileSystems.getDefault().newWatchService()
         folder.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
-        closeHandle = NotifierExecutors.enqueue(PathPollImpl(watchService, ::filesModified))
+        closeHandle = NotifierExecutors.enqueue(PathPollImpl(watchService), ::filesModified)
     }
 
     private fun filesModified(paths: Sequence<Path>) {
