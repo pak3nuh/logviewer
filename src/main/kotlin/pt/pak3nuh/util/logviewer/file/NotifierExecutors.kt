@@ -1,5 +1,6 @@
 package pt.pak3nuh.util.logviewer.file
 
+import pt.pak3nuh.util.logviewer.util.Logger
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedDeque
@@ -59,6 +60,7 @@ object NotifierExecutors {
 private data class PollData(val pollPathPoll: PathPoll, val consumer: (Sequence<Path>) -> Unit, var expired: Boolean = false)
 
 private const val REFRESH_TIME_MS = 1_000L
+private val logger = Logger.createLogger<PollThread>()
 
 private class PollThread(private val queue: Queue<PollData>) : Thread("file-poll-${threadCounter.getAndIncrement()}") {
 
@@ -77,6 +79,7 @@ private class PollThread(private val queue: Queue<PollData>) : Thread("file-poll
 
     private fun doPoll() {
         val data: PollData? = queue.poll()
+        logger.trace("Polling data %s", data)
         when {
             data == null -> sleep(REFRESH_TIME_MS)
             data.expired -> data.pollPathPoll.close()
@@ -84,6 +87,7 @@ private class PollThread(private val queue: Queue<PollData>) : Thread("file-poll
                 val size = queue.size + 1
                 val timeout = REFRESH_TIME_MS / size
                 val poll = data.pollPathPoll.poll(timeout, TimeUnit.MILLISECONDS)
+                logger.trace("Notifying consumer with poll data")
                 data.consumer(poll)
                 queue.offer(data)
             }
