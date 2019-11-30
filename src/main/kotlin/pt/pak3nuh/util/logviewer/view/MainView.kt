@@ -16,18 +16,27 @@ class MainView : View("Logviewer") {
 
     override val root: Parent = borderpane {
 
+        val settingsEnabled = booleanProperty(false)
         // Open, Clear, Settings
         top = hbox {
             button("Open File").action(::selectFile)
-            button("Clear").action {
-                (tabPane.selectionModel.selectedItem as? LogFileTab)?.clearLines()
+            button("Clear").action { selectedTab()?.clearLines() }
+            button("Settings") {
+                enableWhen(settingsEnabled)
+                action {
+                    selectedTab()?.also { tab ->
+                        val fragment = SettingsFragment(tab.file, tab.settings)
+                        fragment.openModal()
+                        fragment.result?.apply { tab.settings = this }
+                    }
+                }
             }
-            button("Settings")
         }
 
         // tabs
         center = anchorpane {
             tabPane = tabpane().anchorAll()
+            tabPane.tabs.sizeProperty.addListener { _, _, newValue -> settingsEnabled.value = newValue.toInt() > 0 }
         }
     }
 
@@ -49,5 +58,9 @@ class MainView : View("Logviewer") {
     private fun addFileTab(file: File) {
         logger.info("Opening file %s", file)
         tabPane.tabs.add(LogFileTab(file))
+    }
+
+    private fun selectedTab(): LogFileTab? {
+        return tabPane.selectionModel.selectedItem as? LogFileTab
     }
 }

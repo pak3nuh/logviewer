@@ -13,13 +13,12 @@ import pt.pak3nuh.util.logviewer.view.anchorAll
 import tornadofx.*
 import java.io.File
 
-class LogFileTab(file: File) : Tab(file.name) {
+class LogFileTab(val file: File, var settings: Settings = Settings.createDefault()) : Tab(file.name) {
 
     private val logger = Logger.createLogger<LogFileTab>(file.name)
 
     private val lineList = observableListOf<LogItem>()
     private var notifier: FileChangeNotifier? = null
-    private val settings = Settings()
     private lateinit var filterPane: SplitPane
     private lateinit var mainView: TableView<LogItem>
 
@@ -76,6 +75,7 @@ class LogFileTab(file: File) : Tab(file.name) {
         columns.addAll(settings.columns.map { colDef ->
             val column = TableColumn<LogItem, String>(colDef.name)
             column.cellValueFactory = Callback {
+                // todo add some intermediary representation to avoid parsing the same string for each column
                 stringProperty(colDef.getter(it.value))
             }
             column
