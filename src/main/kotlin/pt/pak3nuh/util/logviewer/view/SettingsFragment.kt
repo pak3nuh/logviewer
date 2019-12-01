@@ -19,8 +19,8 @@ import java.io.File
 // todo change to a modal dialog for better interface
 class SettingsFragment(private val file: File, settings: Settings): Fragment("Settings") {
 
-    private val includedColumns = observableListOf<Rename>()
-    private val availableColumns = observableListOf<Rename>()
+    private val includedColumns = observableListOf<Column>()
+    private val availableColumns = observableListOf<Column>()
     private val builder = SettingsBuilder()
     var result: Settings? = null
 
@@ -45,7 +45,7 @@ class SettingsFragment(private val file: File, settings: Settings): Fragment("Se
                             val definition = ColumnDefinition(field.name) {
                                 (it.message as List<String>)[idx]
                             }
-                            Rename(field.name, definition)
+                            Column(field.name, definition)
                         }
                 includedColumns.clear()
                 availableColumns.clear()
@@ -59,7 +59,7 @@ class SettingsFragment(private val file: File, settings: Settings): Fragment("Se
                             val definition = ColumnDefinition(field.name) { logItem ->
                                 (logItem.message as JsonObject)[field.name].asString
                             }
-                            Rename(field.name, definition)
+                            Column(field.name, definition)
                         }
                 includedColumns.clear()
                 availableColumns.clear()
@@ -88,16 +88,16 @@ class SettingsFragment(private val file: File, settings: Settings): Fragment("Se
         }
     }
 
-    private fun produceSettings(): Settings = builder.build(includedColumns.map(Rename::definition))
+    private fun produceSettings(): Settings = builder.build(includedColumns.map(Column::definition))
 
-    private fun addColumn(selectedItem: Rename?) {
+    private fun addColumn(selectedItem: Column?) {
         if (selectedItem != null) {
             availableColumns.remove(selectedItem)
             includedColumns.add(selectedItem)
         }
     }
 
-    private fun removeColumn(selectedItem: Rename?) {
+    private fun removeColumn(selectedItem: Column?) {
         if (selectedItem != null) {
             availableColumns.add(selectedItem)
             includedColumns.remove(selectedItem)
@@ -105,7 +105,7 @@ class SettingsFragment(private val file: File, settings: Settings): Fragment("Se
     }
 }
 
-private class Rename(val name: String, val definition: ColumnDefinition) {
+private class Column(val name: String, val definition: ColumnDefinition) {
     override fun toString(): String {
         return name
     }
