@@ -26,8 +26,10 @@ class MainView : View("Logviewer") {
                 action {
                     selectedTab()?.also { tab ->
                         val fragment = SettingsFragment(tab.file, tab.settings)
-                        fragment.openModal()
-                        fragment.result?.apply { tab.settings = this }
+                        fragment.openModal(block = true)
+                        fragment.result?.apply {
+                            tab.settings = this
+                        }
                     }
                 }
             }

@@ -1,38 +1,69 @@
 package pt.pak3nuh.util.logviewer.view
 
+import com.google.gson.JsonObject
 import javafx.scene.Parent
 import javafx.scene.control.SelectionMode
 import javafx.scene.control.TextInputDialog
 import javafx.scene.control.ToggleGroup
-import pt.pak3nuh.util.logviewer.file.FileField
-import pt.pak3nuh.util.logviewer.file.FileStructure
+import javafx.scene.layout.VBox
+import pt.pak3nuh.util.logviewer.data.LogItem
 import pt.pak3nuh.util.logviewer.file.FixedFileStructure
 import pt.pak3nuh.util.logviewer.file.JsonFileStructure
+import pt.pak3nuh.util.logviewer.file.json.jsonParser
+import pt.pak3nuh.util.logviewer.view.control.ColumnDefinition
+import pt.pak3nuh.util.logviewer.view.control.ItemFactory
 import pt.pak3nuh.util.logviewer.view.control.Settings
 import tornadofx.*
 import java.io.File
 
 // todo change to a modal dialog for better interface
-class SettingsFragment(private val file: File, settings: Settings) : Fragment("Settings") {
+class SettingsFragment(private val file: File, settings: Settings): Fragment("Settings") {
 
-    private val includedColumns = observableListOf<String>()
-    private val availableColumns = observableListOf<String>()
-    private var fieldList = listOf<FileField>()
-    private var separator = settings.separator
+    private val includedColumns = observableListOf<Rename>()
+    private val availableColumns = observableListOf<Rename>()
+    private val builder = SettingsBuilder()
     var result: Settings? = null
 
-    override val root: Parent = vbox {
+    init {
+        builder.separator = settings.separator
+    }
+
+    override val root: Parent = VBox().apply {
         textfield(file.absoluteFile.path)
         hbox {
             val toggle = ToggleGroup()
             radiobutton(text = "Separator char", group = toggle).action {
-                separator = TextInputDialog(separator).showAndWait()
-                        .map { if (it.isNullOrEmpty()) separator else it.substring(0, 1) }
-                        .orElse(separator)
-                parse(FixedFileStructure(file, separator))
+                builder.separator = TextInputDialog(builder.separator).showAndWait()
+                        .map { if (it.isNullOrEmpty()) builder.separator else it.substring(0, 1) }
+                        .orElse(builder.separator)
+                builder.itemFactory = {
+                    LogItem(it.split(builder.separator), it)
+                }
+                val elements = FixedFileStructure(file, builder.separator)
+                        .readStructure()
+                        .mapIndexed { idx, field ->
+                            val definition = ColumnDefinition(field.name) {
+                                (it.message as List<String>)[idx]
+                            }
+                            Rename(field.name, definition)
+                        }
+                includedColumns.clear()
+                availableColumns.clear()
+                availableColumns.addAll(elements)
             }
             radiobutton(text = "Json", group = toggle).action {
-                parse(JsonFileStructure(file))
+                builder.itemFactory = { LogItem(jsonParser.fromJson(it, JsonObject::class.java), it) }
+                val elements = JsonFileStructure(file)
+                        .readStructure()
+                        .map {field ->
+                            val definition = ColumnDefinition(field.name) { logItem ->
+                                (logItem.message as JsonObject)[field.name].asString
+                            }
+                            Rename(field.name, definition)
+                        }
+                includedColumns.clear()
+                availableColumns.clear()
+                availableColumns.addAll(elements)
             }
         }
         hbox {
@@ -57,28 +88,36 @@ class SettingsFragment(private val file: File, settings: Settings) : Fragment("S
         }
     }
 
-    private fun produceSettings(): Settings {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    private fun produceSettings(): Settings = builder.build(includedColumns.map(Rename::definition))
 
-    private fun addColumn(selectedItem: String?) {
+    private fun addColumn(selectedItem: Rename?) {
         if (selectedItem != null) {
             availableColumns.remove(selectedItem)
             includedColumns.add(selectedItem)
         }
     }
 
-    private fun removeColumn(selectedItem: String?) {
+    private fun removeColumn(selectedItem: Rename?) {
         if (selectedItem != null) {
             availableColumns.add(selectedItem)
             includedColumns.remove(selectedItem)
         }
     }
+}
 
-    private fun parse(structure: FileStructure) {
-        fieldList = structure.readStructure()
-        includedColumns.clear()
-        availableColumns.clear()
-        availableColumns.addAll(fieldList.map { it.name })
+private class Rename(val name: String, val definition: ColumnDefinition) {
+    override fun toString(): String {
+        return name
     }
+}
+
+private class SettingsBuilder {
+
+    lateinit var separator: String
+    lateinit var itemFactory: ItemFactory
+
+    fun build(columns: List<ColumnDefinition>): Settings {
+        return Settings(separator, columns, itemFactory)
+    }
+
 }

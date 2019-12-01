@@ -2,14 +2,15 @@ package pt.pak3nuh.util.logviewer.view.control
 
 import pt.pak3nuh.util.logviewer.data.LogItem
 
-class Settings(val separator: String, vararg columns: ColumnDefinition) {
+typealias ItemFactory = (String) -> LogItem
 
-    val columns: List<ColumnDefinition> = columns.asList()
+class Settings(val separator: String, val columns: List<ColumnDefinition>, val itemFactory: ItemFactory) {
 
     companion object {
         fun createDefault(): Settings {
-            val starterDefinition = ColumnDefinition("Message") { it.message }
-            return Settings(";", starterDefinition)
+            return Settings(";", emptyList()) {
+                LogItem(it, it)
+            }
         }
     }
 }

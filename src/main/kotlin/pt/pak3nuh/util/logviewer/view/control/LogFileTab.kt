@@ -13,14 +13,21 @@ import pt.pak3nuh.util.logviewer.view.anchorAll
 import tornadofx.*
 import java.io.File
 
-class LogFileTab(val file: File, var settings: Settings = Settings.createDefault()) : Tab(file.name) {
+class LogFileTab(val file: File, settings: Settings = Settings.createDefault()) : Tab(file.name) {
 
     private val logger = Logger.createLogger<LogFileTab>(file.name)
 
     private val lineList = observableListOf<LogItem>()
     private var notifier: FileChangeNotifier? = null
+    // todo this is ugly, already in settings
+    private var itemFactory: ItemFactory = settings.itemFactory
     private lateinit var filterPane: SplitPane
     private lateinit var mainView: TableView<LogItem>
+
+    var settings: Settings = settings
+        set(value) {
+            onNewSettings(value)
+        }
 
     init {
         openFile(file)
@@ -31,9 +38,10 @@ class LogFileTab(val file: File, var settings: Settings = Settings.createDefault
             center = anchorpane {
                 splitpane(Orientation.VERTICAL) {
                     anchorpane {
-                        mainView = tableview(lineList) {
+                        mainView = tableview(lineList)
+                        mainView.apply {
                             isEditable = false
-                            configureColumns(this)
+                            configureColumns(settings.columns)
                         }.anchorAll()
                     }
 
@@ -69,17 +77,30 @@ class LogFileTab(val file: File, var settings: Settings = Settings.createDefault
         }
     }
 
-    private fun configureColumns(tableView: TableView<LogItem>) {
-        val columns = tableView.columns
-        columns.clear()
-        columns.addAll(settings.columns.map { colDef ->
+    private fun onNewSettings(settings: Settings) {
+        logger.debug("Applying new settings")
+        itemFactory = settings.itemFactory
+        val newList = lineList.map {
+            itemFactory(it.asString)
+        }
+        lineList.clear()
+        lineList.addAll(newList)
+        configureColumns(settings.columns)
+    }
+
+    private fun configureColumns(columns: List<ColumnDefinition>) {
+        logger.trace("Configuring columns")
+        val list = columns + ColumnDefinition("Full message") { logItem -> logItem.asString }
+        val elements = list.map { colDef ->
             val column = TableColumn<LogItem, String>(colDef.name)
             column.cellValueFactory = Callback {
-                // todo add some intermediary representation to avoid parsing the same string for each column
+                // todo called multiple times for the same field??
                 stringProperty(colDef.getter(it.value))
             }
             column
-        })
+        }
+        mainView.columns.clear()
+        mainView.columns.addAll(elements)
     }
 
     private fun addFilterView(filter: String, regex: Boolean) {
@@ -95,7 +116,7 @@ class LogFileTab(val file: File, var settings: Settings = Settings.createDefault
                     action { filterPane.items.remove(container) }
                 }
                 val predicate: (LogItem) -> Boolean =
-                        if (regex) { it -> Regex(filter).matches(it.message) } else { it -> filter in it.message }
+                        if (regex) { it -> Regex(filter).matches(it.asString) } else { it -> filter in it.asString }
                 center = listview(FilteredList(lineList, predicate)) {
                     selectionModel.selectionMode = SelectionMode.SINGLE
                     onMouseClicked = EventHandler {
@@ -115,7 +136,7 @@ class LogFileTab(val file: File, var settings: Settings = Settings.createDefault
         val notifier = FileChangeNotifier(file.toPath())
         notifier.onNewLines {
             Platform.runLater {
-                lineList.addAll(it.map(::LogItem))
+                lineList.addAll(it.map(itemFactory))
             }
         }
         notifier.start()
