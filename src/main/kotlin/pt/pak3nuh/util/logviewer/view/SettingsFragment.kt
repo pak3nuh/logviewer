@@ -55,9 +55,9 @@ class SettingsFragment(private val file: File, settings: Settings): Fragment("Se
                 builder.itemFactory = { LogItem(jsonParser.fromJson(it, JsonObject::class.java), it) }
                 val elements = JsonFileStructure(file)
                         .readStructure()
-                        .map {field ->
+                        .map { field ->
                             val definition = ColumnDefinition(field.name) { logItem ->
-                                (logItem.message as JsonObject)[field.name].asString
+                                (logItem.message as JsonObject)[field.name].toString()
                             }
                             Column(field.name, definition)
                         }
