@@ -16,6 +16,7 @@ add the property like `gradle run -Dlogviewer.threading.number=5`
 
 #### Nice to have
 - Change thread model to coroutines with kotlin flows for notification
+- Use GraalVm for [native image support](https://gluonhq.com/gluon-substrate-and-graalvm-native-image-with-javafx-support/)
 
 ### Requirements
 - Java 11
