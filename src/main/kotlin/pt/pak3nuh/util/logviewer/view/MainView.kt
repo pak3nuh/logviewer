@@ -1,6 +1,8 @@
 package pt.pak3nuh.util.logviewer.view
 
+import javafx.collections.ListChangeListener
 import javafx.scene.Parent
+import javafx.scene.control.Tab
 import javafx.scene.control.TabPane
 import javafx.stage.FileChooser
 import pt.pak3nuh.util.logviewer.util.Logger
@@ -38,7 +40,11 @@ class MainView : View("Logviewer") {
         // tabs
         center = anchorpane {
             tabPane = tabpane().anchorAll()
-            tabPane.tabs.sizeProperty.addListener { _, _, newValue -> settingsEnabled.value = newValue.toInt() > 0 }
+            tabPane.tabs.addListener { c: ListChangeListener.Change<out Tab> ->
+                val newSize = c.list.size
+                logger.debug("Number of tabs changed: $newSize")
+                settingsEnabled.value = newSize > 0
+            }
         }
     }
 
