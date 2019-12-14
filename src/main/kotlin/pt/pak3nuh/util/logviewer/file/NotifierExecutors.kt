@@ -7,8 +7,6 @@ import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-const val THREAD_NUMBER_PROPERTY = "logviewer.threading.number"
-
 object NotifierExecutors {
 
     /**

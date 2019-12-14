@@ -7,8 +7,17 @@ Yet another log viewer. You know what it does.
 - Tab view for multiple opened files
 - Configurable number of thread to poll the file changes
 
-The number is configurable by setting the JVM property `logviewer.threading.number`. If gradle is used add the `-D` to
-add the property like `gradle run -Dlogviewer.threading.number=5`
+### Configurations
+
+There are some system properties that can be set in order to configure the application.
+If gradle is used add the `-D` to add the property like `gradle run -Dlogviewer.threading.number=5`
+
+- `logviewer.threading.leg.level`- Configures the logging level. Available values are
+0 Trace
+1 Debug
+2 Info
+3 Error
+- `logviewer.threading.number` - The number of threads available to process file notifications
 
 #### Roadmap
 - Structured log: Split and extract each log line into columns for easy access
@@ -22,6 +31,7 @@ add the property like `gradle run -Dlogviewer.threading.number=5`
 - Gradle 5.6 (optional if gradle wrapper is used)
 
 ### Run the application
+
 
 Because OpenJfx has a lot of operating system dependencies, see [here](https://openjfx.io/openjfx-docs), it's 
 impractical to create an uber jar or installation.

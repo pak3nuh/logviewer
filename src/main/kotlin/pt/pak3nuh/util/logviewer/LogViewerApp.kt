@@ -4,18 +4,20 @@
 package pt.pak3nuh.util.logviewer
 
 import pt.pak3nuh.util.logviewer.file.NotifierExecutors
-import pt.pak3nuh.util.logviewer.file.THREAD_NUMBER_PROPERTY
+import pt.pak3nuh.util.logviewer.properties.LOG_LEVEL_PROPERTY
+import pt.pak3nuh.util.logviewer.properties.THREAD_NUMBER_PROPERTY
 import pt.pak3nuh.util.logviewer.util.LogLevel
 import pt.pak3nuh.util.logviewer.util.Logger
 import pt.pak3nuh.util.logviewer.view.MainView
-import tornadofx.*
+import tornadofx.App
+import tornadofx.launch
 
 private val logger = Logger.createLogger<LogViewerApp>()
 
 class LogViewerApp : App(MainView::class)
 
 fun main(args: Array<String>) {
-    Logger.level = LogLevel.DEBUG
+    configureLogging(System.getProperty(LOG_LEVEL_PROPERTY))
     configureThreads(System.getProperty(THREAD_NUMBER_PROPERTY))
     launch<LogViewerApp>(args)
 }
@@ -25,5 +27,20 @@ fun configureThreads(threadProperty: String?) {
     val propValue = threadProperty?.toIntOrNull()
     if (propValue != null) {
         NotifierExecutors.numberOfThreads = propValue
+    }
+}
+
+fun configureLogging(loggingLevel: String?) {
+    logger.info("Threading property value: %s", loggingLevel)
+    val propValue = loggingLevel?.toIntOrNull()
+    if (propValue != null) {
+        val logValues = LogLevel.values()
+        if(propValue < logValues.size) {
+            val newLevel = logValues[propValue]
+            logger.info("Setting log level to $newLevel")
+            Logger.level = newLevel
+            return
+        }
+        logger.error("Invalid value, ignoring")
     }
 }
