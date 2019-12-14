@@ -19,6 +19,7 @@ class LogFileTab(val file: File, settings: Settings = Settings.createDefault()) 
 
     private val lineList = observableListOf<LogItem>()
     private var notifier: FileChangeNotifier? = null
+    private val fullMessageColumn = ColumnDefinition("Full message") { logItem -> logItem.asString }
     // todo this is ugly, already in settings
     private var itemFactory: ItemFactory = settings.itemFactory
     private lateinit var filterPane: SplitPane
@@ -88,19 +89,20 @@ class LogFileTab(val file: File, settings: Settings = Settings.createDefault()) 
         configureColumns(settings.columns)
     }
 
-    private fun configureColumns(columns: List<ColumnDefinition>) {
-        logger.trace("Configuring columns")
-        val list = columns + ColumnDefinition("Full message") { logItem -> logItem.asString }
-        val elements = list.map { colDef ->
+    private fun configureColumns(fileColumns: List<ColumnDefinition>) {
+        logger.debug("Configuring columns")
+        val allColumns = fileColumns + fullMessageColumn
+        val tableColumns = allColumns.map { colDef ->
             val column = TableColumn<LogItem, String>(colDef.name)
             column.cellValueFactory = Callback {
-                // todo called multiple times for the same field??
-                stringProperty(colDef.getter(it.value))
+                val cellValue = it.value
+                logger.trace("Invoking cell factory on item $cellValue")
+                stringProperty(colDef.getter(cellValue))
             }
             column
         }
         mainView.columns.clear()
-        mainView.columns.addAll(elements)
+        mainView.columns.addAll(tableColumns)
     }
 
     private fun addFilterView(filter: String, regex: Boolean) {

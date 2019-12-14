@@ -77,15 +77,20 @@ private class PollThread(private val queue: Queue<PollData>) : Thread("file-poll
 
     private fun doPoll() {
         val data: PollData? = queue.poll()
-        logger.trace("Polling data %s", data)
         when {
-            data == null -> sleep(REFRESH_TIME_MS)
-            data.expired -> data.pollPathPoll.close()
+            data == null -> {
+                logger.trace("No paths being monitored")
+                sleep(REFRESH_TIME_MS)
+            }
+            data.expired -> {
+                logger.trace("Data %s is expired, closing", data)
+                data.pollPathPoll.close()
+            }
             else -> {
                 val size = queue.size + 1
                 val timeout = REFRESH_TIME_MS / size
                 val poll = data.pollPathPoll.poll(timeout, TimeUnit.MILLISECONDS)
-                logger.trace("Notifying consumer with poll data")
+                logger.trace("Notifying consumer with poll result %s", poll)
                 data.consumer(poll)
                 queue.offer(data)
             }
