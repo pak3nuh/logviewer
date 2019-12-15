@@ -1,7 +1,7 @@
 package pt.pak3nuh.util.logviewer.file
 
-import com.google.gson.JsonObject
-import pt.pak3nuh.util.logviewer.file.json.jsonParser
+import pt.pak3nuh.util.logviewer.file.json.JsonMap
+import pt.pak3nuh.util.logviewer.file.json.JsonParsing
 import java.io.File
 
 abstract class FileStructure(
@@ -30,9 +30,9 @@ class JsonFileStructure(
 ) : FileStructure(jsonFile) {
 
     override fun readStructure(line: String): List<FileField> {
-        val json = jsonParser.fromJson(line, JsonObject::class.java)
+        val json = JsonParsing.parse<JsonMap>(line)
         var counter = 0
-        return json.keySet().map { FileField(counter++, it) }
+        return json.keys.map { FileField(counter++, it) }
     }
 }
 

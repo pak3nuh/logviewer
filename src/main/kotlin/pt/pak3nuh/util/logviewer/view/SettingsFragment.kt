@@ -1,6 +1,5 @@
 package pt.pak3nuh.util.logviewer.view
 
-import com.google.gson.JsonObject
 import javafx.scene.Parent
 import javafx.scene.control.SelectionMode
 import javafx.scene.control.TextInputDialog
@@ -9,7 +8,8 @@ import javafx.scene.layout.VBox
 import pt.pak3nuh.util.logviewer.data.LogItem
 import pt.pak3nuh.util.logviewer.file.FixedFileStructure
 import pt.pak3nuh.util.logviewer.file.JsonFileStructure
-import pt.pak3nuh.util.logviewer.file.json.jsonParser
+import pt.pak3nuh.util.logviewer.file.json.JsonMap
+import pt.pak3nuh.util.logviewer.file.json.JsonParsing
 import pt.pak3nuh.util.logviewer.view.control.ColumnDefinition
 import pt.pak3nuh.util.logviewer.view.control.ItemFactory
 import pt.pak3nuh.util.logviewer.view.control.Settings
@@ -52,12 +52,12 @@ class SettingsFragment(private val file: File, settings: Settings): Fragment("Se
                 availableColumns.addAll(elements)
             }
             radiobutton(text = "Json", group = toggle).action {
-                builder.itemFactory = { LogItem(jsonParser.fromJson(it, JsonObject::class.java), it) }
+                builder.itemFactory = { LogItem(JsonParsing.parse<JsonMap>(it), it) }
                 val elements = JsonFileStructure(file)
                         .readStructure()
                         .map { field ->
                             val definition = ColumnDefinition(field.name) { logItem ->
-                                (logItem.message as JsonObject)[field.name].toString()
+                                (logItem.message as JsonMap)[field.name].toString()
                             }
                             Column(field.name, definition)
                         }
