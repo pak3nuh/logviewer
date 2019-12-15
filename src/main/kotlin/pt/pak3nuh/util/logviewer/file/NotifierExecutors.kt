@@ -18,7 +18,7 @@ object NotifierExecutors {
             rebalance(numberOfThreads - threadQueue.size)
         }
 
-    private val pollQueue: Queue<PollData> = ConcurrentLinkedDeque()
+    private val pollQueue: Queue<PathMonitor> = ConcurrentLinkedDeque()
     private val threadQueue: MutableList<PollThread> = arrayListOf(createPollThread())
 
     private fun createPollThread(): PollThread {
@@ -45,8 +45,8 @@ object NotifierExecutors {
         }
     }
 
-    fun enqueue(pollStrategy: PathPoll, consumer: (Sequence<Path>) -> Unit): AutoCloseable {
-        val data = PollData(pollStrategy, consumer)
+    fun enqueue(pollStrategy: PollStrategy, consumer: (Sequence<Path>) -> Unit): AutoCloseable {
+        val data = PathMonitor(pollStrategy, consumer)
         pollQueue.offer(data)
         return AutoCloseable {
             data.expired = true
@@ -55,12 +55,18 @@ object NotifierExecutors {
 
 }
 
-private data class PollData(val pollPathPoll: PathPoll, val consumer: (Sequence<Path>) -> Unit, var expired: Boolean = false)
+private class PathMonitor(
+        private val pollStrategy: PollStrategy,
+        private val consumer: (Sequence<Path>) -> Unit,
+        var expired: Boolean = false
+) {
+    fun pollAndConsume(timeout: Long, unit: TimeUnit) {
+        consumer(pollStrategy.poll(timeout, unit))
+    }
+    fun close() = pollStrategy.close()
+}
 
-private const val REFRESH_TIME_MS = 1_000L
-private val logger = Logger.createLogger<PollThread>()
-
-private class PollThread(private val queue: Queue<PollData>) : Thread("file-poll-${threadCounter.getAndIncrement()}") {
+private class PollThread(private val queue: Queue<PathMonitor>) : Thread("file-poll-${threadCounter.getAndIncrement()}") {
 
     init {
         isDaemon = true
@@ -76,7 +82,7 @@ private class PollThread(private val queue: Queue<PollData>) : Thread("file-poll
     }
 
     private fun doPoll() {
-        val data: PollData? = queue.poll()
+        val data: PathMonitor? = queue.poll()
         when {
             data == null -> {
                 logger.trace("No paths being monitored")
@@ -84,21 +90,22 @@ private class PollThread(private val queue: Queue<PollData>) : Thread("file-poll
             }
             data.expired -> {
                 logger.trace("Data %s is expired, closing", data)
-                data.pollPathPoll.close()
+                data.close()
             }
             else -> {
                 val size = queue.size + 1
                 val timeout = REFRESH_TIME_MS / size
-                val poll = data.pollPathPoll.poll(timeout, TimeUnit.MILLISECONDS)
-                logger.trace("Notifying consumer with poll result %s", poll)
-                data.consumer(poll)
+                logger.trace("Polling data %s", data)
+                data.pollAndConsume(timeout, TimeUnit.MILLISECONDS)
                 queue.offer(data)
             }
         }
     }
 
     private companion object {
-        val threadCounter = AtomicInteger(0)
+        private val threadCounter = AtomicInteger(0)
+        private const val REFRESH_TIME_MS = 1_000L
+        private val logger = Logger.createLogger<PollThread>()
     }
 }
 

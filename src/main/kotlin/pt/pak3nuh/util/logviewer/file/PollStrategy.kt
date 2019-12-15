@@ -5,13 +5,13 @@ import java.nio.file.WatchKey
 import java.nio.file.WatchService
 import java.util.concurrent.TimeUnit
 
-interface PathPoll : AutoCloseable {
+interface PollStrategy : AutoCloseable {
     fun poll(timeout: Long, unit: TimeUnit): Sequence<Path>
 }
 
-class PathPollImpl(
+class PollStrategyImpl(
         private val watchService: WatchService
-) : PathPoll {
+) : PollStrategy {
 
     override fun poll(timeout: Long, unit: TimeUnit): Sequence<Path> {
         val key: WatchKey? = watchService.poll(timeout, unit)
