@@ -12,7 +12,7 @@ Yet another log viewer. You know what it does.
 There are some system properties that can be set in order to configure the application.
 If gradle is used add the `-D` to add the property like `gradle run -Dlogviewer.threading.number=5`
 
-- `logviewer.threading.leg.level`- Configures the logging level. Available values are
+- `logviewer.log.level`- Configures the logging level. Available values are
 0 Trace
 1 Debug
 2 Info
