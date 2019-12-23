@@ -6,6 +6,8 @@ typealias ItemFactory = (String) -> LogItem
 
 class Settings(val separator: String, val columns: List<ColumnDefinition>, val itemFactory: ItemFactory) {
 
+    var columnWidth: Double = 200.0
+
     companion object {
         fun createDefault(): Settings {
             return Settings(";", emptyList()) {

@@ -4,7 +4,11 @@ import javafx.application.Platform
 import javafx.collections.transformation.FilteredList
 import javafx.event.EventHandler
 import javafx.geometry.Orientation
-import javafx.scene.control.*
+import javafx.scene.control.SelectionMode
+import javafx.scene.control.SplitPane
+import javafx.scene.control.Tab
+import javafx.scene.control.TableColumn
+import javafx.scene.control.TableView
 import javafx.util.Callback
 import pt.pak3nuh.util.logviewer.data.LogItem
 import pt.pak3nuh.util.logviewer.file.FileChangeNotifier
@@ -94,6 +98,7 @@ class LogFileTab(val file: File, settings: Settings = Settings.createDefault()) 
         val allColumns = fileColumns + fullMessageColumn
         val tableColumns = allColumns.map { colDef ->
             val column = TableColumn<LogItem, String>(colDef.name)
+            column.prefWidth = settings.columnWidth
             column.cellValueFactory = Callback {
                 val cellValue = it.value
                 logger.trace("Invoking cell factory on item $cellValue")
